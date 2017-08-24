@@ -6,6 +6,8 @@ import argparse
 import signal
 import dropbox
 
+from dropbox_content_hasher import DropboxContentHasher
+
 __version__ = 0.1
 
 
@@ -135,6 +137,23 @@ def get(args):
 
             # we have a file so create local directory if necessary then download
             print('Downloading {} to {}' .format(src, dest))
+
+            # using hash to skip unchanged files
+            if os.path.isfile(dest):
+                hasher = DropboxContentHasher()
+                with open(dest, 'rb') as f:
+                    while True:
+                        chunk = f.read(1024)  # or whatever chunk size you want
+                        if len(chunk) == 0:
+                            break
+                        hasher.update(chunk)
+                localhash = hasher.hexdigest()
+
+                print('Remote Hash: {}' .format(entry.content_hash))
+                print('Local  Hash: {}' .format(localhash))
+
+                if localhash == entry.content_hash:
+                    continue
 
             try:
                 dbx.files_download_to_file(path=src, download_path=dest)
